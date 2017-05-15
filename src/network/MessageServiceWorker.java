@@ -108,6 +108,7 @@ public class MessageServiceWorker implements Runnable{
 								}
 								if(!succesfull) {
 									mService.messageReceived("login failed");
+									sendLogged("login failed");
 								}
 							} catch (SQLException e) {
 								// TODO Auto-generated catch block
@@ -133,7 +134,7 @@ public class MessageServiceWorker implements Runnable{
 							System.out.println(registerPassword);
 
 							conn.insertQuery("INSERT INTO `usuarios` (`Login`, `Password`, `Mail`) VALUES ('"+registerLogin+"', '"+registerPassword+"', '"+registerMail+"')");
-
+							sendLogged("registered");
 						}
 					break;
 				}
@@ -160,8 +161,6 @@ public class MessageServiceWorker implements Runnable{
 		try {
 			doStream = new DataOutputStream(sClient.getOutputStream());
 			doStream.writeUTF(message);
-			// Tanquem el socket
-			sServer.close();
 		} catch (IOException e) {
 			JOptionPane.showMessageDialog(null, "SERVER CONNECTION ERROR (message not sent)");
 		}
