@@ -6,6 +6,7 @@ import javax.swing.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.ResultSet;
@@ -21,13 +22,16 @@ public class MessageServiceWorker implements Runnable{
 	private MessageService mService;
 	private ServerSocket sServer;
 	private Socket sClient;
-	private DataInputStream diStream;
+	//private DataInputStream diStream;
 	private DataOutputStream doStream;
+	private ObjectInputStream oiStream;
 	private boolean active;
 	private String comando;
 	private String login;
 	private String register;
 	private ConectorDB conn;
+	private String newMessage;
+	private Object newObject;
 
 	public MessageServiceWorker(MessageService mService, ServerSocket sServer, ConectorDB conn) {
 		this.mService = mService;
@@ -47,43 +51,69 @@ public class MessageServiceWorker implements Runnable{
 		String registerLogin = new String();
 		String registerPassword = new String();
 		String registerMail = new String();
-		Boolean succesfull = FALSE;
 
 
 		conn.connect();
 
 		while (active) {
+
+			Boolean succesfull = FALSE;
 			try {
 				// Esperem peticions de connexio
 				sClient = sServer.accept();
+				System.out.println("hola2");
 				// Atenem les connexions
-				diStream = new DataInputStream(sClient.getInputStream());
-				String newMessage = diStream.readUTF();
+				//diStream = new DataInputStream(sClient.getInputStream());
+				System.out.println("hola6");
+				oiStream = new ObjectInputStream(sClient.getInputStream());
+				newObject = receiveObject();
+				System.out.println("hola5");
+				if(newObject instanceof String) {
+					newMessage = (String) newObject;
+				}
+
+				System.out.println("hola3");
 				// Informem a MessageService que sha rebut un nou missatge
 				// ell informara al controlador i el controlador actualitzara la vista.
 				mService.messageReceived("[" + getCurrentTime()+ "] " + newMessage);
 
-
-
 				comando = newMessage;
 
-				switch (comando){
+				System.out.println("message received: " + comando);
+
+				switch (comando) {
 					//controlar error limpiar las string
-					case("LOGIN"):
+					case ("LOGIN"):
+						System.out.println("hola4");
 						x = 1;
 						loginLogin = "";
 						loginPassword = "";
-					break;
+						break;
 
-					case("REGISTER"):
+					case ("REGISTER"):
 						x = 2;
 						registerLogin = "";
 						registerMail = "";
 						registerPassword = "";
-					break;
+						break;
 
-					default:
+					case ("GUARDAR"):
+						System.out.println("HOLA2");
+						x = 3;
+						sendLogged("save");
+						break;
+
+					//default:
+						//break;
+				}
 						if(x == 1){
+							System.out.println("if login");
+							newObject = receiveObject();
+							System.out.println("aqui no entra");
+							if(newObject instanceof String) {
+								newMessage = (String) newObject;
+							}
+							System.out.println("mensaje que llega" + newMessage);
 							login = newMessage;
 							for (n = 0; n < login.length() && login.charAt(n) != '#'; n++) {
 								char c = login.charAt(n);
@@ -115,7 +145,12 @@ public class MessageServiceWorker implements Runnable{
 								System.out.println("Problema al recuperar les dades...");
 							}
 						}
+
 						if(x == 2){
+							newObject = receiveObject();
+							if(newObject instanceof String) {
+								newMessage = (String) newObject;
+							}
 							register = newMessage;
 							for (a = 0; a < register.length() && register.charAt(a) != '#'; a++) {
 								char c = register.charAt(a);
@@ -136,13 +171,24 @@ public class MessageServiceWorker implements Runnable{
 							conn.insertQuery("INSERT INTO `usuarios` (`Login`, `Password`, `Mail`) VALUES ('"+registerLogin+"', '"+registerPassword+"', '"+registerMail+"')");
 							sendLogged("registered");
 						}
-					break;
-				}
+						if (x == 3){
+							System.out.println("HOlA1");
+							newObject = receiveObject();
+							System.out.println("HOLA3");
+							if(newObject instanceof String) {
+								newMessage = (String) newObject;
+								System.out.println("codigo de guardado: " + newMessage);
+							}
+							System.out.println("before send logged");
+							sendLogged("recieved");	//cambiar posteriormente a un guardado succesfull
+						}
 				/*conn.insertQuery("INSERT INTO usuarios (Login, Password) VALUES ('Rafa','4255','http://salle.url.edu')");*/
 
 				// Tanquem el socket del client
 				sClient.close();
-			} catch (IOException e) { }
+			} catch (IOException e) { } catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
 		}
 		conn.disconnect();
 	}
@@ -159,10 +205,18 @@ public class MessageServiceWorker implements Runnable{
 
 	public void sendLogged(String message) {
 		try {
+			System.out.println("sending message: " + message);
 			doStream = new DataOutputStream(sClient.getOutputStream());
 			doStream.writeUTF(message);
 		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			e.printStackTrace();
 			JOptionPane.showMessageDialog(null, "SERVER CONNECTION ERROR (message not sent)");
 		}
 	}
+
+	private Object receiveObject() throws IOException, ClassNotFoundException {
+		return oiStream.readObject();
+	}
+
 }
