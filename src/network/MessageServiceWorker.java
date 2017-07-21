@@ -3,26 +3,23 @@ package network;
 import utils.ConectorDB;
 
 import javax.swing.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.LinkedList;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
-public class MessageServiceWorker implements Runnable{
+public class  MessageServiceWorker implements Runnable{
 
 	private MessageService mService;
 	private ServerSocket sServer;
 	private Socket sClient;
-	//private DataInputStream diStream;
 	private DataOutputStream doStream;
 	private ObjectInputStream oiStream;
 	private boolean active;
@@ -32,17 +29,19 @@ public class MessageServiceWorker implements Runnable{
 	private ConectorDB conn;
 	private String newMessage;
 	private Object newObject;
+	private int i;
 
 	public MessageServiceWorker(MessageService mService, ServerSocket sServer, ConectorDB conn) {
 		this.mService = mService;
 		this.sServer = sServer;
 		this.conn = conn;
 		active = true;
+
 	}
 
 	// Escolta peticions de connexio i llegeix els missatges dels clients
 	public void run() {
-
+		int i = 1;
 		int x = 0;
 		int n,m,a,b,d,f;
 		ResultSet consulta;
@@ -141,11 +140,10 @@ public class MessageServiceWorker implements Runnable{
 									sendLogged("login failed");
 								}
 							} catch (SQLException e) {
-								// TODO Auto-generated catch block
+								//TODO Auto-generated catch block
 								System.out.println("Problema al recuperar les dades...");
 							}
 						}
-
 						if(x == 2){
 							newObject = receiveObject();
 							if(newObject instanceof String) {
@@ -180,10 +178,24 @@ public class MessageServiceWorker implements Runnable{
 								System.out.println("codigo de guardado: " + newMessage);
 							}
 							System.out.println("before send logged");
+							try {
+								System.out.println(loginLogin);
+
+								String path = new String("/Users/ManuSahun/Desktop/"+loginLogin+".txt");
+								System.out.println(path);
+
+								conn.updateQuery("UPDATE usuarios SET Partida ='"+path+"' WHERE Login='"+loginLogin+"'");
+
+								FileWriter fichero = new FileWriter("/Users/ManuSahun/Desktop/"+loginLogin+".txt");
+								PrintWriter pw = new PrintWriter(fichero);
+								pw.println(newMessage);
+								fichero.close();
+
+							} catch (IOException ioe) {
+								ioe.printStackTrace();
+							}
 							sendLogged("recieved");	//cambiar posteriormente a un guardado succesfull
 						}
-				/*conn.insertQuery("INSERT INTO usuarios (Login, Password) VALUES ('Rafa','4255','http://salle.url.edu')");*/
-
 				// Tanquem el socket del client
 				sClient.close();
 			} catch (IOException e) { } catch (ClassNotFoundException e) {

@@ -62,6 +62,7 @@ public class ConectorDB {
 
          } catch (SQLException ex) {
              System.out.println("Problema al Modificar --> " + ex.getSQLState());
+             System.err.println("Error Code: " + ((SQLException)ex).getErrorCode());
          }
     }
     
